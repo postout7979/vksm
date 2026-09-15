@@ -1,0 +1,123 @@
+# Deploys the VKS agent onto a VKS workload cluster after it has been
+# put into "Managed" state from the portal.
+#
+# Usage:
+#   1. From the portal, trigger management for the target VKS cluster
+#      (real flow):
+#        curl -X POST $PORTAL_URL/api/vks-clusters/<id>/agent/bootstrap
+#      This mints a bootstrap token and marks the cluster "pending".
+#   2. Fill in the four placeholders below (search for "REPLACE_"):
+#        REPLACE_IMAGE           - image built from agents/vks_agent
+#        REPLACE_PORTAL_URL      - e.g. https://vcf-agent-portal.example.com
+#        REPLACE_VKS_CLUSTER_ID  - the <id> from step 1
+#        REPLACE_BOOTSTRAP_TOKEN - the token from step 1 (valid once)
+#   3. kubectl apply -f vks-agent.yaml --context <vks-cluster-context>
+#
+# Once the agent's first report arrives, the portal flips the cluster
+# to "Managed" and starts showing its collected inventory.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vcf-agent-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vks-agent
+  namespace: vcf-agent-system
+---
+# Read-only, cluster-wide: the agent needs to see every namespace's
+# workloads to build the inventory shown in the portal.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vks-agent-reader
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vks-agent-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vks-agent-reader
+subjects:
+  - kind: ServiceAccount
+    name: vks-agent
+    namespace: vcf-agent-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vks-agent-config
+  namespace: vcf-agent-system
+data:
+  PORTAL_URL: "REPLACE_PORTAL_URL"
+  VKS_CLUSTER_ID: "REPLACE_VKS_CLUSTER_ID"
+  REPORT_INTERVAL_SECONDS: "60"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vks-agent-bootstrap
+  namespace: vcf-agent-system
+type: Opaque
+stringData:
+  BOOTSTRAP_TOKEN: "REPLACE_BOOTSTRAP_TOKEN"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vks-agent
+  namespace: vcf-agent-system
+  labels:
+    app: vks-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vks-agent
+  template:
+    metadata:
+      labels:
+        app: vks-agent
+    spec:
+      serviceAccountName: vks-agent
+      containers:
+        - name: agent
+          image: REPLACE_IMAGE
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          envFrom:
+            - configMapRef:
+                name: vks-agent-config
+            - secretRef:
+                name: vks-agent-bootstrap
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  test -f /tmp/agent-healthy &&
+                  [ $(( $(date +%s) - $(date -r /tmp/agent-healthy +%s) )) -lt 150 ]
+            initialDelaySeconds: 20
+            periodSeconds: 60

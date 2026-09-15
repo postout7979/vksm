@@ -1,0 +1,68 @@
+body {
+  font-family: -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  background: #f4f4f2;
+  color: #222;
+  margin: 0;
+  padding: 0 0 3rem;
+}
+header {
+  background: #1c2b4a;
+  color: #fff;
+  padding: 1.25rem 2rem;
+}
+header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+header .sub { margin: 4px 0 0; font-size: 13px; color: #c7d0e2; }
+main { max-width: 900px; margin: 0 auto; padding: 1.5rem 2rem; }
+section { margin-bottom: 2rem; }
+h2 { font-size: 16px; font-weight: 600; margin: 0 0 0.75rem; }
+.card-list { display: flex; flex-direction: column; gap: 10px; }
+.card {
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-title { font-weight: 600; font-size: 15px; margin: 0; }
+.card-sub { font-size: 12px; color: #666; margin: 2px 0 0; }
+.badge {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.badge.connected, .badge.managed, .badge.running { background: #e2f2e6; color: #1c6b34; }
+.badge.disconnected, .badge.crash_loop, .badge.degraded { background: #fce7e7; color: #a12a2a; }
+.badge.pending, .badge.not_deployed, .badge.unmanaged, .badge.deploying { background: #f2f0e6; color: #7a6a2a; }
+.card-body {
+  border-top: 1px solid #eee;
+  margin-top: 10px;
+  padding-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  font-size: 12px;
+  color: #444;
+}
+.card-body .k { color: #888; display: block; }
+.card-actions { margin-top: 10px; display: flex; gap: 8px; }
+button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #cfcfc8;
+  background: #fff;
+  cursor: pointer;
+}
+button:hover { background: #f0f0ec; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+pre.inventory {
+  margin-top: 10px;
+  background: #fafaf7;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  max-height: 220px;
+  overflow: auto;
+}

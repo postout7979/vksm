@@ -1,0 +1,147 @@
+# Deploys the supervisor agent onto a VCF 9.1 Supervisor cluster.
+#
+# Usage:
+#   1. Register the Supervisor with the portal (POST /api/supervisors),
+#      note its <id>.
+#   2. Get a bootstrap token:
+#        curl -X POST $PORTAL_URL/api/supervisors/<id>/agent/bootstrap
+#   3. Fill in the four placeholders below (search for "REPLACE_"):
+#        REPLACE_IMAGE           - image built from agents/supervisor_agent
+#        REPLACE_PORTAL_URL      - e.g. https://vcf-agent-portal.example.com
+#        REPLACE_SUPERVISOR_ID   - the <id> from step 1
+#        REPLACE_BOOTSTRAP_TOKEN - the token from step 2 (valid once)
+#   4. kubectl apply -f supervisor-agent.yaml --context <supervisor-context>
+#
+# After the agent registers successfully, the bootstrap token becomes
+# useless (the portal clears it server-side) -- you can leave it in
+# the Secret or delete/rotate it, your call.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vcf-agent-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: supervisor-agent
+  namespace: vcf-agent-system
+---
+# Read-only access to cluster-scoped objects the agent collects status
+# from. Extend this if you add collectors for VCF/Supervisor-specific
+# custom resources (WCP namespaces, ResourcePool, StoragePolicy, ...).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: supervisor-agent-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: supervisor-agent-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: supervisor-agent-reader
+subjects:
+  - kind: ServiceAccount
+    name: supervisor-agent
+    namespace: vcf-agent-system
+---
+# Namespace-scoped: lets the agent create/update the Secret it uses to
+# persist its own session token (the "agent pod가 생성한 secret").
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: supervisor-agent-secret-manager
+  namespace: vcf-agent-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: supervisor-agent-secret-manager
+  namespace: vcf-agent-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: supervisor-agent-secret-manager
+subjects:
+  - kind: ServiceAccount
+    name: supervisor-agent
+    namespace: vcf-agent-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supervisor-agent-config
+  namespace: vcf-agent-system
+data:
+  PORTAL_URL: "REPLACE_PORTAL_URL"
+  SUPERVISOR_ID: "REPLACE_SUPERVISOR_ID"
+  AGENT_NAMESPACE: "vcf-agent-system"
+  SESSION_SECRET_NAME: "supervisor-agent-session"
+  REPORT_INTERVAL_SECONDS: "30"
+---
+# One-time bootstrap credential. The agent exchanges this for a
+# long-lived session on first contact; the portal invalidates it
+# server-side once /agent/register succeeds.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supervisor-agent-bootstrap
+  namespace: vcf-agent-system
+type: Opaque
+stringData:
+  BOOTSTRAP_TOKEN: "REPLACE_BOOTSTRAP_TOKEN"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supervisor-agent
+  namespace: vcf-agent-system
+  labels:
+    app: supervisor-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: supervisor-agent
+  template:
+    metadata:
+      labels:
+        app: supervisor-agent
+    spec:
+      serviceAccountName: supervisor-agent
+      containers:
+        - name: agent
+          image: REPLACE_IMAGE
+          envFrom:
+            - configMapRef:
+                name: supervisor-agent-config
+            - secretRef:
+                name: supervisor-agent-bootstrap
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  test -f /tmp/agent-healthy &&
+                  [ $(( $(date +%s) - $(date -r /tmp/agent-healthy +%s) )) -lt 90 ]
+            initialDelaySeconds: 15
+            periodSeconds: 30
