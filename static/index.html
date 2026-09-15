@@ -23,6 +23,22 @@
         <button type="submit">등록</button>
         <button type="button" id="btn-cancel-add-supervisor" class="secondary">취소</button>
       </form>
+
+      <div id="supervisor-yaml-panel" class="yaml-panel hidden">
+        <div class="yaml-panel-head">
+          <div>
+            <p class="yaml-panel-title">Supervisor 등록 완료 — 에이전트 배포 YAML</p>
+            <p class="yaml-panel-sub">아래 매니페스트를 대상 Supervisor 클러스터 컨텍스트에서 <code>kubectl apply -f -</code>로 적용하세요. 부트스트랩 토큰은 1회용이며 에이전트가 등록에 성공하면 자동으로 무효화됩니다.</p>
+          </div>
+          <div class="yaml-panel-actions">
+            <button id="btn-copy-supervisor-yaml">YAML 복사</button>
+            <button id="btn-copy-supervisor-apply" class="secondary">kubectl apply 명령 복사</button>
+            <button id="btn-close-supervisor-yaml" class="secondary">닫기</button>
+          </div>
+        </div>
+        <pre id="supervisor-yaml-content" class="yaml-content"></pre>
+      </div>
+
       <div id="supervisors" class="card-list"></div>
     </section>
 

@@ -37,6 +37,45 @@ h2 { font-size: 16px; font-weight: 600; margin: 0 0 0.75rem; }
 }
 .inline-form button { flex: 0 0 auto; }
 .inline-form button.secondary { background: #f0f0ec; }
+
+.yaml-panel {
+  background: #10182b;
+  color: #e4e8f5;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.yaml-panel.hidden { display: none; }
+.yaml-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.yaml-panel-title { font-size: 14px; font-weight: 600; margin: 0; color: #fff; }
+.yaml-panel-sub { font-size: 12px; color: #aab2cc; margin: 4px 0 0; max-width: 520px; }
+.yaml-panel-sub code { background: #1e2740; padding: 1px 5px; border-radius: 4px; }
+.yaml-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.yaml-panel-actions button {
+  font-size: 12px;
+  background: #2a3556;
+  color: #fff;
+  border: 1px solid #3b4772;
+}
+.yaml-panel-actions button.secondary { background: transparent; }
+.yaml-content {
+  background: #0a0f1e;
+  border: 1px solid #24304f;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 360px;
+  overflow: auto;
+  white-space: pre;
+}
 .card-list { display: flex; flex-direction: column; gap: 10px; }
 .card {
   background: #fff;

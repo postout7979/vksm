@@ -182,7 +182,7 @@ $("#btn-cancel-add-supervisor").onclick = () => {
 supForm.onsubmit = async (e) => {
   e.preventDefault();
   const fd = new FormData(supForm);
-  await api("/api/supervisors", {
+  const sup = await api("/api/supervisors", {
     method: "POST",
     body: JSON.stringify({
       name: fd.get("name"),
@@ -192,6 +192,163 @@ supForm.onsubmit = async (e) => {
   supForm.reset();
   supForm.classList.add("hidden");
   loadSupervisors();
+
+  // Mirror TMC-SM's registration flow: right after a management
+  // cluster/Supervisor is registered, issue its bootstrap credential
+  // and show the ready-to-apply agent manifest.
+  const { bootstrap_token } = await api(`/api/supervisors/${sup.id}/agent/bootstrap`, {
+    method: "POST",
+  });
+  showSupervisorYaml(sup, bootstrap_token);
+};
+
+function buildSupervisorYaml(sup, bootstrapToken) {
+  const portalUrl = window.location.origin;
+  return `apiVersion: v1
+kind: Namespace
+metadata:
+  name: vcf-agent-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: supervisor-agent
+  namespace: vcf-agent-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: supervisor-agent-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: supervisor-agent-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: supervisor-agent-reader
+subjects:
+  - kind: ServiceAccount
+    name: supervisor-agent
+    namespace: vcf-agent-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: supervisor-agent-secret-manager
+  namespace: vcf-agent-system
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: supervisor-agent-secret-manager
+  namespace: vcf-agent-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: supervisor-agent-secret-manager
+subjects:
+  - kind: ServiceAccount
+    name: supervisor-agent
+    namespace: vcf-agent-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supervisor-agent-config
+  namespace: vcf-agent-system
+data:
+  PORTAL_URL: "${portalUrl}"
+  SUPERVISOR_ID: "${sup.id}"
+  AGENT_NAMESPACE: "vcf-agent-system"
+  SESSION_SECRET_NAME: "supervisor-agent-session"
+  REPORT_INTERVAL_SECONDS: "30"
+---
+# One-time credential -- becomes invalid automatically once this agent
+# successfully calls /agent/register on the portal.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supervisor-agent-bootstrap
+  namespace: vcf-agent-system
+type: Opaque
+stringData:
+  BOOTSTRAP_TOKEN: "${bootstrapToken}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supervisor-agent
+  namespace: vcf-agent-system
+  labels:
+    app: supervisor-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: supervisor-agent
+  template:
+    metadata:
+      labels:
+        app: supervisor-agent
+    spec:
+      serviceAccountName: supervisor-agent
+      containers:
+        - name: agent
+          image: <REGISTRY>/supervisor-agent:latest   # TODO: 빌드한 이미지로 교체
+          envFrom:
+            - configMapRef:
+                name: supervisor-agent-config
+            - secretRef:
+                name: supervisor-agent-bootstrap
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - >-
+                  test -f /tmp/agent-healthy &&
+                  [ $(( $(date +%s) - $(date -r /tmp/agent-healthy +%s) )) -lt 90 ]
+            initialDelaySeconds: 15
+            periodSeconds: 30
+`;
+}
+
+function showSupervisorYaml(sup, bootstrapToken) {
+  const yaml = buildSupervisorYaml(sup, bootstrapToken);
+  const panel = $("#supervisor-yaml-panel");
+  const content = $("#supervisor-yaml-content");
+  content.textContent = yaml;
+  panel.dataset.yaml = yaml;
+  panel.dataset.applyCmd = `kubectl config use-context <${sup.name}-supervisor-context>\nkubectl apply -f supervisor-agent.yaml`;
+  panel.classList.remove("hidden");
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+$("#btn-copy-supervisor-yaml").onclick = () => {
+  navigator.clipboard.writeText($("#supervisor-yaml-panel").dataset.yaml || "");
+};
+$("#btn-copy-supervisor-apply").onclick = () => {
+  navigator.clipboard.writeText($("#supervisor-yaml-panel").dataset.applyCmd || "");
+};
+$("#btn-close-supervisor-yaml").onclick = () => {
+  $("#supervisor-yaml-panel").classList.add("hidden");
 };
 
 // --- Add-VKS-cluster form ---
