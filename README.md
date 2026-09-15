@@ -170,4 +170,3 @@ docker run -p 8000:8000 -v vcf-agent-portal-data:/data vcf-agent-portal
 - 스키마 변경 시 이 프로토타입은 Alembic 같은 마이그레이션 도구가 없으므로,
   기존 볼륨을 쓰던 중이라면 `docker compose down -v`로 볼륨을 초기화하고
   다시 띄워야 합니다.
-VKS Management

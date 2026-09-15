@@ -24,6 +24,17 @@ async function loadSupervisors() {
   const el = $("#supervisors");
   el.innerHTML = "";
   list.forEach((s) => el.appendChild(renderSupervisorCard(s)));
+  populateSupervisorSelect(list);
+}
+
+function populateSupervisorSelect(list) {
+  const select = document.querySelector('#form-add-vks select[name="supervisor_id"]');
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = list
+    .map((s) => `<option value="${s.id}">${s.name} (${s.vcf_instance})</option>`)
+    .join("");
+  if (current) select.value = current;
 }
 
 function renderSupervisorCard(s) {
@@ -160,3 +171,51 @@ setInterval(() => {
   loadSupervisors();
   loadVksClusters();
 }, 15000);
+
+// --- Add-Supervisor form ---
+const supForm = $("#form-add-supervisor");
+$("#btn-show-add-supervisor").onclick = () => supForm.classList.toggle("hidden");
+$("#btn-cancel-add-supervisor").onclick = () => {
+  supForm.reset();
+  supForm.classList.add("hidden");
+};
+supForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const fd = new FormData(supForm);
+  await api("/api/supervisors", {
+    method: "POST",
+    body: JSON.stringify({
+      name: fd.get("name"),
+      vcf_instance: fd.get("vcf_instance"),
+    }),
+  });
+  supForm.reset();
+  supForm.classList.add("hidden");
+  loadSupervisors();
+};
+
+// --- Add-VKS-cluster form ---
+const vksForm = $("#form-add-vks");
+$("#btn-show-add-vks").onclick = () => vksForm.classList.toggle("hidden");
+$("#btn-cancel-add-vks").onclick = () => {
+  vksForm.reset();
+  vksForm.classList.add("hidden");
+};
+vksForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const fd = new FormData(vksForm);
+  await api("/api/vks-clusters", {
+    method: "POST",
+    body: JSON.stringify({
+      supervisor_id: Number(fd.get("supervisor_id")),
+      name: fd.get("name"),
+      namespace: fd.get("namespace") || "default",
+      k8s_version: fd.get("k8s_version") || "v1.29.4",
+      control_plane_nodes: Number(fd.get("control_plane_nodes")) || 1,
+      worker_nodes: Number(fd.get("worker_nodes")) || 1,
+    }),
+  });
+  vksForm.reset();
+  vksForm.classList.add("hidden");
+  loadVksClusters();
+};

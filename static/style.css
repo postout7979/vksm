@@ -14,7 +14,29 @@ header h1 { margin: 0; font-size: 20px; font-weight: 600; }
 header .sub { margin: 4px 0 0; font-size: 13px; color: #c7d0e2; }
 main { max-width: 900px; margin: 0 auto; padding: 1.5rem 2rem; }
 section { margin-bottom: 2rem; }
+.section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.section-head h2 { margin: 0; }
 h2 { font-size: 16px; font-weight: 600; margin: 0 0 0.75rem; }
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.inline-form.hidden { display: none; }
+.inline-form input, .inline-form select {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cfcfc8;
+  flex: 1 1 160px;
+}
+.inline-form button { flex: 0 0 auto; }
+.inline-form button.secondary { background: #f0f0ec; }
 .card-list { display: flex; flex-direction: column; gap: 10px; }
 .card {
   background: #fff;

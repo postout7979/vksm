@@ -13,12 +13,34 @@
 
   <main>
     <section>
-      <h2>Supervisor 클러스터</h2>
+      <div class="section-head">
+        <h2>Supervisor 클러스터</h2>
+        <button id="btn-show-add-supervisor">+ Supervisor 등록</button>
+      </div>
+      <form id="form-add-supervisor" class="inline-form hidden">
+        <input type="text" name="name" placeholder="이름 (예: vcf-seoul-dc01)" required>
+        <input type="text" name="vcf_instance" placeholder="VCF 인스턴스 (예: sc-seoul-01)" required>
+        <button type="submit">등록</button>
+        <button type="button" id="btn-cancel-add-supervisor" class="secondary">취소</button>
+      </form>
       <div id="supervisors" class="card-list"></div>
     </section>
 
     <section>
-      <h2>VKS 클러스터</h2>
+      <div class="section-head">
+        <h2>VKS 클러스터</h2>
+        <button id="btn-show-add-vks">+ VKS 클러스터 등록</button>
+      </div>
+      <form id="form-add-vks" class="inline-form hidden">
+        <select name="supervisor_id" required></select>
+        <input type="text" name="name" placeholder="이름 (예: order-svc-vks)" required>
+        <input type="text" name="namespace" placeholder="네임스페이스" value="default">
+        <input type="text" name="k8s_version" placeholder="K8s 버전" value="v1.29.4">
+        <input type="number" name="control_plane_nodes" placeholder="Ctrl 노드 수" value="1" min="1">
+        <input type="number" name="worker_nodes" placeholder="Worker 노드 수" value="2" min="1">
+        <button type="submit">등록</button>
+        <button type="button" id="btn-cancel-add-vks" class="secondary">취소</button>
+      </form>
       <div id="vks-clusters" class="card-list"></div>
     </section>
   </main>
